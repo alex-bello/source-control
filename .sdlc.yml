@@ -1,0 +1,30 @@
+schema: 1
+labels:
+  mode: mapped
+  vocabulary: {"sdlc":"sdlc","sdlc-feature":"sdlc-feature","sdlc-work-item":"sdlc-work-item","sdlc-requirements":"sdlc-requirements","sdlc-design":"sdlc-design","ready":"ready","in-progress":"in-progress","review":"review","complete":"complete","blocked":"blocked","needs-discovery":"needs-discovery"}
+  mappings: {"sdlc":"sdlc","sdlc-feature":"sdlc-feature","sdlc-work-item":"sdlc-work-item","sdlc-requirements":"sdlc-requirements","sdlc-design":"sdlc-design","ready":"status/committed","in-progress":"status/in-progress","review":"status/needs-review","complete":"status/closed","blocked":"status/blocked","needs-discovery":"needs/refinement"}
+branch:
+  pattern: sdlc/{issue-number}-{short-slug}
+  default: main
+implementation:
+  create_branch: true
+  use_worktree: true
+  commit_reference_required: true
+pull_request:
+  creation: ask
+verification:
+  require_tests: true
+  require_acceptance_checks: true
+  require_manual_evidence_when_relevant: true
+  reject_unrelated_changes: false
+delivery:
+  default_flavor: thin-slice
+  flavors: ["thin-slice", "stepwise", "feature"]
+orchestration:
+  automatic_lifecycle: true
+  max_concurrency: 2
+  max_remediation_passes: 2
+  reviewers: ["general", "risk-security-operability"]
+reconciliation:
+  close_child_on_merge: true
+  close_feature_on_complete: true

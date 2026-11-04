@@ -1,0 +1,12 @@
+{
+  "name": "source-control",
+  "private": true,
+  "description": "A reusable agent skill and TypeScript CLI for working with GitHub and Forgejo repositories, issues, and pull requests",
+  "scripts": {
+    "validate": "node scripts/sdlc/validate-config.mjs .sdlc.yml",
+    "sdlc:validate-config": "node scripts/sdlc/validate-config.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
