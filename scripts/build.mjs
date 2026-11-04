@@ -7,9 +7,9 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const source = path.join(repositoryRoot, "skills/source-control/src/cli.ts");
-const script = path.join(repositoryRoot, "skills/source-control/scripts/sc");
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const source = path.join(repositoryRoot, "src/cli.ts");
+const script = path.join(repositoryRoot, "scripts/sc");
 const binary = path.join(repositoryRoot, "dist/sc");
 
 function build(args, cwd = repositoryRoot) {

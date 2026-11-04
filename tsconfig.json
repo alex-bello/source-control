@@ -1,0 +1,9 @@
+{
+  // Fully strict project: every TypeScript source except the legacy exception list.
+  // Legacy files are checked by tsconfig.legacy.json instead. When a file is made
+  // strict-clean, remove it from "exclude" here and from "include" in
+  // tsconfig.legacy.json. The goal is for both lists to become empty.
+  "extends": "./tsconfig.base.json",
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/cli.ts"]
+}

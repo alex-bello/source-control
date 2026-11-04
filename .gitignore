@@ -10,3 +10,7 @@
 # Built Visual Studio Code Extensions
 *.vsix
 
+
+# Dependencies and build output
+node_modules/
+dist/

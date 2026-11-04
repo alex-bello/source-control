@@ -3,10 +3,18 @@
   "private": true,
   "description": "A reusable agent skill and TypeScript CLI for working with GitHub and Forgejo repositories, issues, and pull requests",
   "scripts": {
-    "validate": "node scripts/sdlc/validate-config.mjs .sdlc.yml",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.legacy.json",
+    "sc:build": "node scripts/build.mjs",
+    "sc:dev": "bun src/cli.ts",
+    "test": "node --test tests/sc.test.mjs",
+    "validate": "pnpm run sdlc:validate-config -- .sdlc.yml && pnpm run typecheck && pnpm run test",
     "sdlc:validate-config": "node scripts/sdlc/validate-config.mjs"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2"
   }
 }

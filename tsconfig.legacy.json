@@ -1,0 +1,14 @@
+{
+  // Legacy exception list: files that predate the strict typecheck.
+  // src/cli.ts produced 27 errors under full "strict": 17 implicit any, 8 null
+  // related, and 2 plain type mismatches. Rather than rewrite it, the 2 type
+  // mismatches are fixed with type-only casts in the source and the two strict
+  // sub-flags below are relaxed for the listed files only. Later items shrink
+  // this list, then delete this file.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "strictNullChecks": false
+  },
+  "include": ["src/cli.ts"]
+}

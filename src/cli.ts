@@ -86,7 +86,7 @@ function run(name: string, args: string[], { allowFailure = false, skipVersionCh
   if (!executableExists(name)) fail(EXIT.missing, `required executable not found: ${name}`);
   if (!skipVersionCheck) requireToolVersion(name);
   const result = spawnSync(name, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-  if (result.error?.code === "ENOENT") fail(EXIT.missing, `required executable not found: ${name}`);
+  if ((result.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") fail(EXIT.missing, `required executable not found: ${name}`);
   if (result.status !== 0 && !allowFailure) {
     if (result.stderr) process.stderr.write(sanitizeText(result.stderr));
     fail(EXIT.native, `${name} command failed with exit code ${result.status ?? "unknown"}`);
@@ -503,7 +503,7 @@ function parseGlobal(argv: string[]): { options: GlobalOptions; rest: string[] }
   let index = 0;
   while (index < argv.length && argv[index].startsWith("--")) {
     const flag = argv[index++];
-    if (flag === "--provider") options.provider = argv[index++];
+    if (flag === "--provider") options.provider = argv[index++] as GlobalOptions["provider"];
     else if (flag === "--repo") options.repo = argv[index++];
     else if (flag === "--remote") options.remote = argv[index++];
     else if (flag === "--limit") options.limit = Number(argv[index++]);
