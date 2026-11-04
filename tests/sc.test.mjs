@@ -1815,3 +1815,67 @@ test("provider reports a null version when the tool is absent", async (t) => {
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(result.stdout).tool, { tool: "gh", version: null, minimum: "2.57.0", supported: null });
 });
+
+test("short values in OAuth-named environment variables do not corrupt provider output", async (t) => {
+  const directory = await fixture(t, {
+    git: githubRemote,
+    tea: "exit 99",
+    gh: `printf '%s\\n' '{"number":111,"title":"Issue 11 and PR 101 on 1.1.1","body":"","state":"OPEN","author":{"login":"octo"},"url":"https://github.com/owner/project/issues/111","labels":[],"createdAt":"2026-01-01","updatedAt":"2026-01-02"}'`,
+  });
+  const oauth = { USE_LOCAL_OAUTH: "1", USE_STAGING_OAUTH: "1", CLAUDE_CODE_SDK_HAS_HOST_AUTH_REFRESH: "1" };
+
+  const provider = invoke(directory, ["--provider", "forgejo", "--repo", "owner/project", "provider"], oauth);
+  assert.equal(provider.status, 0, provider.stderr);
+  assert.deepEqual(JSON.parse(provider.stdout).tool, { tool: "tea", version: "0.15.1", minimum: "0.15.0", supported: true });
+  assert.doesNotMatch(provider.stdout, /\[redacted\]/);
+  assert.equal(provider.stderr, "");
+
+  const view = invoke(directory, ["--provider", "github", "issue", "view", "111"], oauth);
+  assert.equal(view.status, 0, view.stderr);
+  const item = JSON.parse(view.stdout).item;
+  assert.equal(item.number, 111);
+  assert.equal(item.title, "Issue 11 and PR 101 on 1.1.1");
+  assert.equal(item.url, "https://github.com/owner/project/issues/111");
+  assert.doesNotMatch(view.stdout, /\[redacted\]/);
+});
+
+test("token-length values in GH_TOKEN are redacted from stdout and stderr", async (t) => {
+  const token = "abcd1234efgh5678ijkl";
+  const directory = await fixture(t, {
+    git: githubRemote,
+    gh: `if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
+  printf '%s\\n' "{\\"number\\":5,\\"title\\":\\"leak $GH_TOKEN\\",\\"body\\":\\"\\",\\"state\\":\\"OPEN\\",\\"author\\":{\\"login\\":\\"octo\\"},\\"url\\":\\"https://github.com/owner/project/issues/5\\",\\"labels\\":[],\\"createdAt\\":\\"2026-01-01\\",\\"updatedAt\\":\\"2026-01-02\\"}"
+  exit 0
+fi
+printf '%s\\n' "failure with $GH_TOKEN" >&2
+exit 1`,
+  });
+
+  const view = invoke(directory, ["--provider", "github", "issue", "view", "5"], { GH_TOKEN: token });
+  assert.equal(view.status, 0, view.stderr);
+  assert.doesNotMatch(view.stdout, new RegExp(token));
+  assert.equal(JSON.parse(view.stdout).item.title, "leak [redacted]");
+
+  const failed = invoke(directory, ["--provider", "github", "issue", "list"], { GH_TOKEN: token });
+  assert.equal(failed.status, 7);
+  assert.doesNotMatch(failed.stderr, new RegExp(token));
+  assert.match(failed.stderr, /failure with \[redacted\]/);
+  assert.equal(failed.stdout, "");
+});
+
+test("only values of at least 8 characters in whole-word sensitive variable names are redacted", async (t) => {
+  const directory = await fixture(t, {
+    git: githubRemote,
+    gh: `printf '%s\\n' "short=$SC_TEST_PASSWORD long=$SC_TEST_SECRET key=$MY_PRIVATE_KEY run=$SSH_AUTH_SOCK flag=$USE_LOCAL_OAUTH" >&2; exit 1`,
+  });
+  const result = invoke(directory, ["--provider", "github", "issue", "list"], {
+    SC_TEST_PASSWORD: "abc1234",
+    SC_TEST_SECRET: "abcd12345",
+    MY_PRIVATE_KEY: "privatekeyvalue",
+    SSH_AUTH_SOCK: "/tmp/agent.sock",
+    USE_LOCAL_OAUTH: "oauth-long-value",
+  });
+  assert.equal(result.status, 7);
+  assert.match(result.stderr, /short=abc1234 long=\[redacted\] key=\[redacted\] run=\[redacted\] flag=oauth-long-value/);
+  assert.equal(result.stdout, "");
+});

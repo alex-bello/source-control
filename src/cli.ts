@@ -34,10 +34,24 @@ const MIN_GH_VERSION = "2.57.0";
 const SKIP_VERSION_CHECK_ENV = "SC_SKIP_VERSION_CHECK";
 const VERSION = "0.14.1";
 const sensitiveValues = new Set<string>();
+// Environment values shorter than this are never redacted: flag-like values such
+// as `1` would otherwise corrupt version numbers, issue numbers, and IDs.
+const MIN_SENSITIVE_VALUE_LENGTH = 8;
+const SENSITIVE_NAME_WORDS = new Set(["token", "secret", "password", "credential", "credentials", "auth"]);
+
+// Names are matched on whole words (split on `_` and other non-alphanumerics,
+// case-insensitive) so `USE_LOCAL_OAUTH` no longer matches `AUTH`. `PRIVATE_KEY`
+// is the adjacent word pair `private` + `key`; the one-word spelling
+// `PRIVATEKEY`, which the former `private.?key` pattern also matched, is kept.
+function isSensitiveName(name: string): boolean {
+  const words = name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  return words.some((word, index) =>
+    SENSITIVE_NAME_WORDS.has(word) || word === "privatekey" || (word === "private" && words[index + 1] === "key"));
+}
 
 function rememberSensitiveValues() {
   for (const [name, value] of Object.entries(process.env)) {
-    if (typeof value === "string" && value.length > 0 && /token|secret|password|credential|auth|private.?key/i.test(name)) {
+    if (typeof value === "string" && value.length >= MIN_SENSITIVE_VALUE_LENGTH && isSensitiveName(name)) {
       sensitiveValues.add(value);
     }
   }
