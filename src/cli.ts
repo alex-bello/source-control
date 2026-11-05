@@ -37,16 +37,25 @@ const sensitiveValues = new Set<string>();
 // Environment values shorter than this are never redacted: flag-like values such
 // as `1` would otherwise corrupt version numbers, issue numbers, and IDs.
 const MIN_SENSITIVE_VALUE_LENGTH = 8;
-const SENSITIVE_NAME_WORDS = new Set(["token", "secret", "password", "credential", "credentials", "auth"]);
+// Words containing one of these fragments are sensitive wherever the fragment
+// sits, so plural and fused spellings (`TOKENS`, `GITHUBTOKEN`, `PASSWORDS`,
+// `PRIVATEKEY`, `AUTHTOKEN`) are covered as they were by the former substring match.
+const SENSITIVE_NAME_FRAGMENTS = ["token", "secret", "password", "credential", "privatekey"];
+// `auth` is the one fragment that cannot match as a substring: it sits inside
+// `OAUTH` and `AUTHOR`. It matches as a whole word, as the trailing word of a
+// fused name (`BASICAUTH`) unless that word is `oauth`, or with one of these
+// suffixes (`AUTHORIZATION`, `AUTHKEY`).
+const AUTH_WORD = /^(?:[a-z0-9]*[^o])?auth(?:s|orization|orisation|entication|key|header|cookie)?$/;
 
-// Names are matched on whole words (split on `_` and other non-alphanumerics,
-// case-insensitive) so `USE_LOCAL_OAUTH` no longer matches `AUTH`. `PRIVATE_KEY`
-// is the adjacent word pair `private` + `key`; the one-word spelling
-// `PRIVATEKEY`, which the former `private.?key` pattern also matched, is kept.
+// Names are split on `_` and other non-alphanumerics and compared
+// case-insensitively, so `USE_LOCAL_OAUTH` and `GIT_AUTHOR_NAME` do not match.
+// `PRIVATE_KEY` and `PRIVATE_KEYS` are the adjacent words `private` + `key(s)`.
 function isSensitiveName(name: string): boolean {
   const words = name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
   return words.some((word, index) =>
-    SENSITIVE_NAME_WORDS.has(word) || word === "privatekey" || (word === "private" && words[index + 1] === "key"));
+    SENSITIVE_NAME_FRAGMENTS.some((fragment) => word.includes(fragment))
+    || AUTH_WORD.test(word)
+    || (word === "private" && /^keys?$/.test(words[index + 1] ?? "")));
 }
 
 function rememberSensitiveValues() {

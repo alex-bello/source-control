@@ -1879,3 +1879,29 @@ test("only values of at least 8 characters in whole-word sensitive variable name
   assert.match(result.stderr, /short=abc1234 long=\[redacted\] key=\[redacted\] run=\[redacted\] flag=oauth-long-value/);
   assert.equal(result.stdout, "");
 });
+
+test("plural and fused spellings of sensitive variable names are redacted, near-miss names are not", async (t) => {
+  const directory = await fixture(t, {
+    git: githubRemote,
+    gh: `printf '%s\\n' "authz=$AUTHORIZATION authtoken=$AUTHTOKEN gh=$GITHUBTOKEN tokens=$API_TOKENS secrets=$SECRETS pw=$PASSWORDS keys=$MY_PRIVATE_KEYS fused=$PRIVATEKEY basic=$BASICAUTH author=$GIT_AUTHOR_NAME oauth=$MYOAUTH" >&2; exit 1`,
+  });
+  const result = invoke(directory, ["--provider", "github", "issue", "list"], {
+    AUTHORIZATION: "authorization-value",
+    AUTHTOKEN: "authtoken-value",
+    GITHUBTOKEN: "githubtoken-value",
+    API_TOKENS: "tokens-value-1",
+    SECRETS: "secrets-value",
+    PASSWORDS: "passwords-value",
+    MY_PRIVATE_KEYS: "privatekeys-value",
+    PRIVATEKEY: "privatekey-value",
+    BASICAUTH: "basicauth-value",
+    GIT_AUTHOR_NAME: "author-long-name",
+    MYOAUTH: "oauth-long-value",
+  });
+  assert.equal(result.status, 7);
+  assert.match(
+    result.stderr,
+    /authz=\[redacted\] authtoken=\[redacted\] gh=\[redacted\] tokens=\[redacted\] secrets=\[redacted\] pw=\[redacted\] keys=\[redacted\] fused=\[redacted\] basic=\[redacted\] author=author-long-name oauth=oauth-long-value/,
+  );
+  assert.equal(result.stdout, "");
+});

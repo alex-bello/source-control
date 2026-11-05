@@ -26,10 +26,11 @@ var SKIP_VERSION_CHECK_ENV = "SC_SKIP_VERSION_CHECK";
 var VERSION = "0.14.1";
 var sensitiveValues = new Set;
 var MIN_SENSITIVE_VALUE_LENGTH = 8;
-var SENSITIVE_NAME_WORDS = new Set(["token", "secret", "password", "credential", "credentials", "auth"]);
+var SENSITIVE_NAME_FRAGMENTS = ["token", "secret", "password", "credential", "privatekey"];
+var AUTH_WORD = /^(?:[a-z0-9]*[^o])?auth(?:s|orization|orisation|entication|key|header|cookie)?$/;
 function isSensitiveName(name) {
   const words = name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-  return words.some((word, index) => SENSITIVE_NAME_WORDS.has(word) || word === "privatekey" || word === "private" && words[index + 1] === "key");
+  return words.some((word, index) => SENSITIVE_NAME_FRAGMENTS.some((fragment) => word.includes(fragment)) || AUTH_WORD.test(word) || word === "private" && /^keys?$/.test(words[index + 1] ?? ""));
 }
 function rememberSensitiveValues() {
   for (const [name, value] of Object.entries(process.env)) {
